@@ -11,13 +11,13 @@ local prefix = ":"
 
 -- PERMISSIONS:
 local permissions = {
-    -- INDEX (you can remove me if you want UwU):
+    -- INDEX (you can remove me if you want):
     2782
 }
 
 -- PLAYER BLACKLIST:
 local playerBlacklist = {
-    -- Enter a USER ID here.
+    -- Enter a USER ID here to blacklist a user from your game
 }
 
 local adminChatColor = Color.FromHex('#000000')
@@ -35,7 +35,7 @@ local listOfCommands = {
     prefix .. "heal [PLAYER (required)] [HEAL BY]",
     prefix .. "health [PLAYER (required)] [HEALTH (required)]",
     prefix .. "createNPC",
-    prefix .. "clone [PLAYER (default: me)]"
+    --prefix .. "clone [PLAYER (default: me)]"
 }
 
 players.PlayerAdded:Connect(function (plr)
@@ -50,6 +50,8 @@ players.PlayerAdded:Connect(function (plr)
 
         plr.ChatColor = adminChatColor
         Chat:UnicastMessage("You are an administrator inside of this game. Do " .. prefix .. "help for a list of commands.", plr)
+
+        -- checkAdminVersion()
 
         plr.Chatted:Connect(function (msg)
             print("Creator sent message: " .. msg)
@@ -287,6 +289,25 @@ function checkPlayerBlackList(plr, userid)
         end
     end
 end
+
+--[[
+function checkAdminVersion()
+    if Http:Get('https://raw.githubusercontent.com/IndexGit01/PolytoriaAdmin/main/version.json', function (data, err, errmsg)
+        if err then
+            print("Error while getting version ID.")
+            return
+        end
+
+        if data == '{"version": 1}' then
+            print("IndexAdminCommands: Out of date version.")
+            return false
+        else
+            print("IndexAdminCommands: Version is up-to-date.")
+            return true
+        end
+    end
+end
+--]]
 
 --[[
 CHECK FOR COMMON PLAYERS (ex. "me", "all", "everyone", "others")
