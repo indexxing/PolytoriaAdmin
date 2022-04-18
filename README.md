@@ -3,6 +3,8 @@ Polytoria admin commands &amp; tools. Made by Index.
 
 > An example game with admin commands built in (free admin for all players visiting) can be visited here to try out the model before adding it into your own games: https://polytoria.com/games/1975
 
+> **YOU MUST ADD YOUR USER ID UNDER THE PERMISSIONS TABLE FOR THIS TO WORK.**
+
 # Prefix
 To use commands, your message must start with a ":" colon.
 
