@@ -5,6 +5,9 @@ Polytoria admin commands &amp; tools. Made by Index.
 
 > **YOU MUST ADD YOUR USER ID UNDER THE PERMISSIONS TABLE FOR THIS TO WORK.**
 
+# Note
+An update will be coming soon. Which will include a few new commands, bug fixes, & some reworked code.
+
 # Prefix
 To use commands, your message must start with a ":" colon.
 
