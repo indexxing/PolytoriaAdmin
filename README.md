@@ -1,19 +1,18 @@
-# PolytoriaAdmin
-Polytoria admin commands &amp; tools. Made by Index.
+# PolyAdmin
+Polytoria chat moderation, fun, utility & misc commands.
 
 > An example game with admin commands built in (free admin for all players visiting) can be visited here to try out the model before adding it into your own games: https://polytoria.com/games/1975
 
 > **YOU MUST ADD YOUR USER ID UNDER THE PERMISSIONS TABLE FOR THIS TO WORK.**
 
-# Note
-An update will be coming soon. Which will include a few new commands, bug fixes, & some reworked code.
+# Note (rewrite information)
+A complete rewrite with more commands, bug fixes & more will be released sometime this week! Stay tuned!
 
 # Prefix
-To use commands, your message must start with a ":" colon.
+To use commands, your message must start with a ":" colon (this can be changed later in settings per the game developer's wishes).
 
 # Future Updates
-- **Shortening Commands** - Adding "all", "everyone", "me", "others" player attributes & allowing shortened usernames (eg. "Ind" would still execute the said command on Index)
-- **Adding More Commands**
+Edit: This list has been deleted since most if not all of the items have been fixed or added in the rewrite (look above for more information about the rewrite).
 
 # Known Bugs
 - **Fixing Usernames with Spaces** - Currently usernames with spaces are completely broken. If you can help me out with this, please message me!
