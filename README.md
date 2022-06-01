@@ -14,7 +14,26 @@ To use commands, your message must start with a ":" colon (this can be changed l
 
 # Commands Available (10)
 - **:help** - Displays a list of commands in chat to the user who executed the command.
-- **:shutdown** [REASON (required)] - Acts like a server shutdown by kicking every player including yourself (could be used for publishing updates on the fly)
-This list is currently in the process of being rewritten due to the model rewrite.
+- **:version** - Displays the current model version that is being used in the game.
+- **:userid (OR) :uid** [PLAYER (required)] - Displays the USER ID of the player, the player must be in the game at the time of the command.
+- **:warn** [PLAYER (required)] [REASON (required)] - Warns the player in chat & notifies them of the reason.
+- **:kick** [PLAYER (required)] [REASON (required)] - Kicks the player from the game & notifies them of the reason.
+- **:ban** [PLAYER (required)] [REASON (required)] - Bans the player from the current server. (NOT PERMANENT AT THE MOMENT)
+- **:announce** [TEXT (required)] - Broadcasts a message in chat to all players of the game.
+- **:tp** [PLAYER 1 (required)] [PLAYER 2 (required)] - Teleports player 1 to player 2.
+- **:bring** [PLAYER (required)] - Brings the player to the player who executed the command.
+- **:to** [PLAYER (required)] - Teleports the player who executed the command to the player.
+- **:explode** [PLAYER (required)] - Creates an explosion in the game environment on the player.
+- **:respawn** [PLAYER (required)] - Respawns the player (may be a bit buggy with Polytoria's player:Respawn function).
+- **:damage** [PLAYER (required)] [DAMAGE (required)] - Damages the player by the specified amount.
+- **:kill** [PLAYER (required)] - Kills the player.
+- **:jail** [PLAYER (required)] - Spawns a jail model around the player that they cannot get out until someone does :unjail (only 1 jail per player to prevent lag).
+- **:unjail** [PLAYER (required)] - Removes the player's jail if they have one.
+- **:sword** [PLAYER (required)] - Gives the player a sword.
+- **:health** [PLAYER (required)] [HEALTH (required)] - Sets the player's health to the health specified. 
+- **:heal** [PLAYER (required)] - Sets the player's health to their maximum health.
+- **:** [REASON (required)] - 
+- **:** [REASON (required)] - 
+- **:** [REASON (required)] - 
 
 ## More commands will be added in the future, multiple commands have been removed from this list due to them being buggy, or Polytoria's features limiting them heavily.
