@@ -32,8 +32,8 @@ To use commands, your message must start with a ":" colon (this can be changed l
 - **:sword** [PLAYER (required)] - Gives the player a sword.
 - **:health** [PLAYER (required)] [HEALTH (required)] - Sets the player's health to the health specified. 
 - **:heal** [PLAYER (required)] - Sets the player's health to their maximum health.
-- **:** [REASON (required)] - 
-- **:** [REASON (required)] - 
-- **:** [REASON (required)] - 
+- **:reset (OR) :re** [PLAYER (required)] - Resets the player's health, walk speed, jump power, respawn time, etc (the player also gets respawned but in the exact same position as where they were before they were respawned.)
+- **:walkspeed (OR) :speed** [PLAYER (required)] [WALK SPEED (required)] - Sets the player's walk speed to the walk speed specified (will throw an error if the number is massive)
+- **:jumppower (OR) :jp** [PLAYER (required)] [JUMP POWER (required)] - Sets the player's jump power to the jump power specified (will throw an error if the number is massive)
 
-## More commands will be added in the future, multiple commands have been removed from this list due to them being buggy, or Polytoria's features limiting them heavily.
+## More commands will be added in the future, some commands have not been added due to Polytoria scripting limitations.
