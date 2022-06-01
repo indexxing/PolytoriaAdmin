@@ -10,6 +10,7 @@ Feedback Form:
 To use commands, your message must start with a ":" colon (this can be changed later in settings per the game developer's wishes by changing the "prefix" variable at the top of the script).
 
 # Known Bugs
+- **Automatically giving Administrator Permissions to "Player" in Polytoria Creator** - Will 100% be fixed in the next release of the model, for now, just publish your games & go to the real game & play it or just use no admin in the "Test Game" in Polytoria's Creator.
 - **Fixing Usernames with Spaces** - Slight fix implemented by adding shortended usernames.
 
 # Commands Available (10)
