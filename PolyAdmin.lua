@@ -1,20 +1,31 @@
--- PolyAdmin v1.0
+-- PolyAdmin v1.2
 -- Model made by Index
 
 -- I recommend joining this Discord server to be notified when the model gets updates: https://discord.gg/XV6rDrjVkV
 
 local players = game["Players"]
 local environment = game["Environment"]
+local playerDefaults = game["PlayerDefaults"]
 local polyAdminModel = environment:FindChild('PolyAdmin')
 
-local modelVersion = "1.0"
+local modelVersion = '{"version":1.2}'
+local modelNumber = 1.2
 
 local musicFolder = Instance.New("Part")
-musicFolder.Size = Vector3.New(0, 0, 0)
-musicFolder.CanCollide = false
+musicFolder.Size = Vector3.New(0.1, 0.1, 0.1)
 musicFolder.Anchored = true
-musicFolder.Parent = environment
-musicFolder.Name = "Music_Folder"
+musicFolder.CanCollide = false
+musicFolder.Parent = polyAdminModel
+musicFolder.Name = "MusicFolder"
+
+--[[
+local playerItems = Instance.New("Part")
+playerItems.Size = Vector3.New(0.1, 0.1, 0.1)
+playerItems.Anchored = true
+playerItems.CanCollide = false
+playerItems.Parent = polyAdminModel
+playerItems.Name = "playerItems"
+--]]
 
 for i, v in pairs(polyAdminModel:GetChildren()) do
     if not v:IsA("Script") then
@@ -35,19 +46,36 @@ local prefix = ":"
 local permissions = {}
 -- To make a user an admin, get their USER ID & paste it in this table (separate each USER ID by a comma)
 
+local protectGameCreator = true
+-- Blocks any severe commands such as kick & ban if the target is the game creator
+
+local protectAdmins = true
+-- Blocks any severe commands such as kick & ban if the target is a game administrator
+
+local protectedusers = {}
+-- Users that are protected from severe commands such as kick & ban commands.
+
+--[[
 local whitelistEnabled = false
--- Stores if the whitelist is enabled or disabled (**WHITELIST IS COMING SOON**)
+-- Stores if the whitelist is enabled or disabled (**COMING SOON**)
+
+local keepItems = false
+-- Keeps inventory items upon death/respawn. (**COMING SOON**)
 
 local whitelist = {}
--- Players that are whitelisted from your game if "whitelistEnabled" variable equals true (**WHITELIST IS COMING SOON**)
+-- Players that are whitelisted from your game if "whitelistEnabled" variable equals true (**COMING SOON**)
+--]]
 
 local banlist = {}
 -- Players that are banned from your game
 
+local jailcells = {}
+-- Stores all jail instances in the game
+
 local adminChatColor = Color.FromHex('#000')
 -- Chat color for admins that join your game
 
-local freeAdmin = false
+local freeAdmin = true
 -- If this variable equals true, checkForPermissions() will get overridden & always return true unless the player is banned from your game
 
 local commandList = {
@@ -68,9 +96,14 @@ local commandList = {
     prefix .. "sword [plr]",
     prefix .. "health [plr] [health]",
     prefix .. "heal [plr]",
+    prefix .. "forcefield (OR) ff [plr]",
+    prefix .. "unforcefield (OR) unff [plr]",
     prefix .. "reset (OR) re [plr]",
     prefix .. "walkspeed (OR) speed [plr] [speed]",
     prefix .. "jumppower (OR) jp [plr] [power]",
+    prefix .. "maxhealth [plr] [health]",
+    prefix .. "music play [sound ID]",
+    prefix .. "music stop"
 }
 -- This table is used for the ":help" command to list all commands.
 
@@ -93,7 +126,56 @@ players.PlayerAdded:Connect(function (plr)
 
         plr.ChatColor = adminChatColor
         -- Change the player's chat color to an administrator color
+
+        --[[
+        local attemptToAGetModelVersion = checkModelVersion()
+
+        if attemptToAGetModelVersion != modelVersion then
+            Chat:UnicastMessage('The PolyAdmin model used in your game is out-of-date. I recommend updating the model by deleting it & re-adding it from the toolbox in the Polytoria Creator or by copying and pasting the script here: https://github.com/IndexGit01/PolytoriaAdmin/blob/main/PolyAdmin.lua', plr)
+        end
+        -- Check if the model is up-to-date
+        --]]
     end
+
+    --[[
+    local newKeepItemsFolder = Instance.New("Part")
+    newKeepItemsFolder.Size = Vector3.New(0.1, 0.1, 0.1)
+    newKeepItemsFolder.Anchored = true
+    newKeepItemsFolder.CanCollide = false
+    newKeepItemsFolder.Parent = playerItems
+    newKeepItemsFolder.Name = plr.Name
+
+    plr["Backpack"].ChildAdded:Connect(function(new)
+        local getKeepItemsFolder = playerItems:FindChild(plr.Name)
+        local clone = new:Clone()
+        clone.Parent = getKeepItemsFolder
+    end)
+
+    plr["Backpack"].ChildRemoved:Connect(function(removed)
+        local getKeepItemsFolder = playerItems:FindChild(plr.Name)
+        local getItem = getKeepItemsFolder:FindChild(removed.Name)
+        getItem:Destroy()
+        -- comment here plz
+        wait(0)
+        if not tonumber(plr.Health) < 1 then
+            local getKeepItemsFolder = playerItems:FindChild(plr.Name)
+            local getItem = getKeepItemsFolder:FindChild(removed.Name)
+            getItem:Destroy()
+        end
+    end)
+
+    plr.Respawned:Connect(function ()
+        if keepItems == true then
+            local getKeepItemsFolder = playerItems:FindChild(plr.Name)
+
+            for i, v in pairs(getKeepItemsFolder:GetChildren()) do
+                if v:IsA('Tool') then
+                    v.Parent = plr["Backpack"]
+                end
+            end
+        end
+    end)
+    --]]
 
     plr.Chatted:Connect(function (msg)
         wait(0)
@@ -108,16 +190,34 @@ players.PlayerAdded:Connect(function (plr)
 
         if attributes[1] == prefix .. "help" then
             if checkForPermissions(plr) then
+                --[[
+                local newNetworkMessage = NetMessage.New()
+                newNetworkMessage.AddString("gui", "Cmds")
+                script.Parent:FindChild('guiUpdate'):InvokeClient(newNetworkMessage, plr)
+                --]]
+                
+                Chat:UnicastMessage('<color=#000>List of Commands (' .. #commandList .. ' commands available):</color>', plr)
                 for i, v in pairs(commandList) do
                     Chat:UnicastMessage(v, plr)
                 end
             end
-        else
-            if attributes[1] == prefix .. "kick" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-        
+        end
+
+        if attributes[1] == prefix .. "about" then
+            if checkForPermissions(plr) then
+                Chat:UnicastMessage('<color=#000>About PolyAdmin (v' .. modelNumber .. '):</color>', plr)
+                Chat:UnicastMessage('PolyAdmin is a model available on Polytoria that allows for moderation, utility, & fun commands made by Index.', plr)
+                Chat:UnicastMessage('Thank you to Vibin <color=#007bff>(https://polytoria.com/user/20547)</color> for updated jail command!', plr)
+                Chat:UnicastMessage('Thank you to Iaceon <color=#007bff>(https://polytoria.com/user/15952)</color> for many suggestions!', plr)
+            end
+        end
+
+        if attributes[1] == prefix .. "kick" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+    
+                    if player != plr then
                         local reason = ""
 
                         for reasonCheck = 3, #attributes, 1 do
@@ -132,41 +232,53 @@ players.PlayerAdded:Connect(function (plr)
         
                         if player then
                             Kick(player, reason, plr)
+                        else
+                            Error("kick", "That player does not exist", plr)
                         end
+                    else
+                        Error("kick", "You cannot kick yourself", plr)
                     end
+                else
+                    Error("kick", "Requires a valid player argument", plr)
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "warn" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-        
-                        local reason = ""
+        if attributes[1] == prefix .. "warn" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+    
+                    local reason = ""
 
-                        for reasonCheck = 3, #attributes, 1 do
-                            if attributes[reasonCheck] then
-                                reason = reason .. " " .. attributes[reasonCheck]
-                            end
-                        end
-        
-                        if not reason then
-                            reason = "no reason specified"
-                        end
-        
-                        if player then
-                            Warn(player, reason)
+                    for reasonCheck = 3, #attributes, 1 do
+                        if attributes[reasonCheck] then
+                            reason = reason .. " " .. attributes[reasonCheck]
                         end
                     end
+    
+                    if not reason then
+                        reason = "no reason specified"
+                    end
+    
+                    if player then
+                        Warn(player, reason)
+                    else
+                        Error("warn", "That player does not exist", plr)
+                    end
+                else
+                    Error("warn", "Requires a valid player argument", plr)
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "ban" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-                        
-                        local reason = ""
+        if attributes[1] == prefix .. "ban" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+                    
+                        if player != plr then
+                            local reason = ""
 
                         for reasonCheck = 3, #attributes, 1 do
                             if attributes[reasonCheck] then
@@ -180,375 +292,416 @@ players.PlayerAdded:Connect(function (plr)
     
                         if player then
                             Ban(player, reason, plr)
+                        else
+                            Error("ban", "That player does not exist", plr)
                         end
+                    else
+                        Error("ban", "You cannot ban yourself", plr)
+                    end
+                else
+                    Error("ban", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "shutdown" then
+            if checkForPermissions(plr) then
+
+                local reason = ""
+
+                for reasonCheck = 2, #attributes, 1 do
+                    if attributes[reasonCheck] then
+                        reason = reason .. " " .. attributes[reasonCheck]
+                    end
+                end
+
+                if reason == "" then
+                    reason = "no reason given"
+                end
+
+                Shutdown(plr, reason)
+            end
+        end
+
+        if attributes[1] == prefix .. "unban" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    Unban(attributes[2])
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "whitelist" then
+            if checkForPermissions(plr) then
+                local whitelistToPrint = 0
+                for i, v in pairs(whitelist) do
+                    if v then
+                        whitelistToPrint = whitelistToPrint .. ", " .. v
                     end
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "shutdown" then
-                if checkForPermissions(plr) then
+        if attributes[1] == prefix .. "whitelist" and attributes[2] == "enable" then
+            if checkForPermissions(plr) then
+                whitelistEnabled = true
+                print(whitelistEnabled)
+                Success(attributes[1] .. " " .. attributes[2], plr)
+            end
+        end
 
-                    local reason = ""
+        if attributes[1] == prefix .. "whitelist" and attributes[2] == "disable" then
+            if checkForPermissions(plr) then
+                whitelistEnabled = false
+                Success(attributes[1] .. " " .. attributes[2], plr)
+            end
+        end
 
-                    for reasonCheck = 2, #attributes, 1 do
+        if attributes[1] == prefix .. "whitelist" and attributes[2] == "add" then
+            if checkForPermissions(plr) then
+                if attributes[3] then
+                    local player = getPlayer(attributes[3])
+
+                    if player then
+                        AddToWhitelist(player)
+                    else
+                        Error("whitelist add", "Requires a valid player argument", plr)
+                    end
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "whitelist" and attributes[2] == "remove" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[3])
+
+                    if player then
+                        RemoveFromWhitelist(player)
+                    else
+                        Error("whitelist remove", "Requires a valid player argument", plr)
+                    end
+                else
+                    Error("whitelist remove", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "whitelist" and attributes[2] == "check" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[3])
+
+                    if player then
+                        Success("[" .. attributes[1] .. " " .. attributes[2] .. "] " .. checkWhitelist(player))
+                    else
+                        Error("whitelist check", "That player does not exist", plr)
+                    end
+                else
+                    Error("whitelist check", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "isadmin" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if player then
+                        if freeAdmin == false then
+                            if checkForPermissions(player) == true then
+                                Chat:UnicastMessage('<color=#37c200>' .. player.Name .. ' is an admin.</color>', plr)
+                            else
+                                Chat:UnicastMessage('<color=#fa0000>' .. player.Name .. ' is NOT an admin.</color>', plr)
+                            end
+                        else
+                            Chat:UnicastMessage('<color=#37c200>' .. player.Name .. ' is an admin [FREE ADMIN IS SET TO TRUE].</color>', plr)
+                        end
+                    else
+                        Error("isadmin", "That player does not exist", plr)
+                    end
+                else
+                    Error("isadmin", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "announce" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local reason = attributes[2]
+                    for reasonCheck = 3, #attributes, 1 do
                         if attributes[reasonCheck] then
                             reason = reason .. " " .. attributes[reasonCheck]
                         end
                     end
 
-                    if reason == "" then
-                        reason = "no reason given"
-                    end
-
-                    Shutdown(plr, reason)
+                    Chat:BroadcastMessage("<color=#000>[Announcement by " .. plr.Name .. "]:</color> <color=#f50000>" .. reason .. "</color>")
+                else
+                    Error("announce", "Requires a valid announcement (string) argument.")
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "unban" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        Unban(attributes[2])
-                    end
+        if attributes[1] == prefix .. "tp" then
+            if checkForPermissions(plr) then
+                if attributes[2] and attributes[3] then
+                    local player1 = getPlayer(attributes[2], plr)
+                    local player2 = getPlayer(attributes[3])
+
+                    TP(player1, player2)
+                else
+                    Error("tp", "Requires 2 valid player arguments", plr)
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "whitelist" then
-                if checkForPermissions(plr) then
-                    local whitelistToPrint = 0
-                    for i, v in pairs(whitelist) do
-                        if v then
-                            whitelistToPrint = whitelistToPrint .. ", " .. v
-                        end
-                    end
+        if attributes[1] == prefix .. "bring" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player2 = getPlayer(attributes[2], plr)
+
+                    TP(player2, plr)
+                else
+                    Error("bring", "Requires a valid player argument", plr)
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "whitelist" and attributes[2] == "enable" then
-                if checkForPermissions(plr) then
-                    whitelistEnabled = true
-                    print(whitelistEnabled)
-                    Success(attributes[1] .. " " .. attributes[2], plr)
+        if attributes[1] == prefix .. "to" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player2 = getPlayer(attributes[2], plr)
+
+                    TP(plr, player2)
+                else
+                    Error("to", "Requires a valid player argument", plr)
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "whitelist" and attributes[2] == "disable" then
-                if checkForPermissions(plr) then
-                    whitelistEnabled = false
-                    Success(attributes[1] .. " " .. attributes[2], plr)
-                end
-            end
-
-            if attributes[1] == prefix .. "whitelist" and attributes[2] == "add" then
-                if checkForPermissions(plr) then
-                    if attributes[3] then
-                        local player = getPlayer(attributes[3])
-
-                        if player then
-                            AddToWhitelist(player)
-                        else
-                            Error("whitelist add", "Requires a valid player argument", plr)
-                        end
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "whitelist" and attributes[2] == "remove" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[3])
-
-                        if player then
-                            RemoveFromWhitelist(player)
-                        else
-                            Error("whitelist remove", "Requires a valid player argument", plr)
-                        end
-                    else
-                        Error("whitelist remove", "Requires a valid player argument", plr)
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "whitelist" and attributes[2] == "check" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[3])
-
-                        if player then
-                            Success("[" .. attributes[1] .. " " .. attributes[2] .. "] " .. checkWhitelist(player))
-                        else
-                            Error("whitelist check", "That player does not exist", plr)
-                        end
-                    else
-                        Error("whitelist check", "Requires a valid player argument", plr)
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "isadmin" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-
-                        if player then
-                            if checkForPermissions(player) == true then
-                                Chat:UnicastMessage(player.Name .. ' is an admin.', plr)
-                            else
-                                Chat:UnicastMessage(player.Name .. ' is NOT an admin.', plr)
-                            end
-                        else
-                            Error("isadmin", "That player does not exist", plr)
-                        end
-                    else
-                        Error("isadmin", "Requires a valid player argument", plr)
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "announce" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local reason = attributes[2]
-                        for reasonCheck = 3, #attributes, 1 do
-                            if attributes[reasonCheck] then
-                                reason = reason .. " " .. attributes[reasonCheck]
-                            end
-                        end
-
-                        Chat:BroadcastMessage("<color=#000>[Announcement by " .. plr.Name .. "]:</color> <color=#f50000>" .. reason .. "</color>")
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "tp" then
-                if checkForPermissions(plr) then
-                    if attributes[2] and attributes[3] then
-                        local player1 = getPlayer(attributes[2], plr)
-                        local player2 = getPlayer(attributes[3])
-
-                        TP(player1, player2)
-                    else
-                        Error("tp", "Requires 2 valid player arguments", plr)
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "bring" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player2 = getPlayer(attributes[2], plr)
-
-                        TP(player2, plr)
-                    else
-                        Error("bring", "Requires a valid player argument", plr)
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "to" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player2 = getPlayer(attributes[2], plr)
-
-                        TP(plr, player2)
-                    else
-                        Error("to", "Requires a valid player argument", plr)
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "explode" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-                            
-                        Explode(player)
-                    else
-                        Error("explode", "Requires a valid player argument", plr)
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "clickteleport" then
-                if checkForPermissions(plr) then
-                    local newToolClone = game["Hidden"]:FindChild('ClickTeleport'):Clone()
-                    newToolClone.Parent = plr["Backpack"]
-                end
-            end
-
-            if attributes[1] == prefix .. "respawn" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-
-                        if type(player) == "table" then
-                            for i, v in pairs(player) do
-                                if v:IsA('Player') then
-                                    v:Respawn()
-                                end
-                            end
-                        else
-                            player:Respawn()
-                        end
-                    else
-                        Error("respawn", "Requires a valid player argument", plr)
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "jail" then
-                if checkForPermissions(plr) then
-                    local player = getPlayer(attributes[2], plr)
-
-                    Jail(player)
-                end
-            end
-
-            if attributes[1] == prefix .. "unjail" then
-                if checkForPermissions(plr) then
-                    local player = getPlayer(attributes[2], plr)
-
-                    Unjail(plr)
-                end
-            end
-
-            if attributes[1] == prefix .. "sword" then
-                if checkForPermissions(plr) then
+        if attributes[1] == prefix .. "explode" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
                     local player = getPlayer(attributes[2], plr)
                         
+                    Explode(player)
+                else
+                    Error("explode", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "clickteleport" then
+            if checkForPermissions(plr) then
+                local newToolClone = game["Hidden"]:FindChild('ClickTeleport'):Clone()
+                newToolClone.Parent = plr["Backpack"]
+            end
+        end
+
+        if attributes[1] == prefix .. "respawn" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
                     if type(player) == "table" then
                         for i, v in pairs(player) do
-                            local newToolClone = game["Hidden"]:FindChild('Great-Sword'):Clone()
-                            newToolClone.Parent = v["Backpack"]
+                            if v:IsA('Player') then
+                                v:Respawn()
+                            end
                         end
                     else
-                        local newToolClone = game["Hidden"]:FindChild('Great-Sword'):Clone()
-                        newToolClone.Parent = player["Backpack"]
+                        player:Respawn()
                     end
+                else
+                    Error("respawn", "Requires a valid player argument", plr)
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "music" and attributes[2] == prefix .. "play" then
-                if checkForPermissions(plr) then
-                    if attributes[1] and attributes[2] and attributes[3] then
-                        local newMusic = Instance.New('Sound')
-                        newMusic.SoundID = attributes[3]
-                        newMusic.Parent = musicFolder
-                        newMusic:Play()
-                        newMusic.Playing = true
+        if attributes[1] == prefix .. "jail" then
+            if checkForPermissions(plr) then
+                local player = getPlayer(attributes[2], plr)
+
+                Jail(player)
+            end
+        end
+
+        if attributes[1] == prefix .. "unjail" then
+            if checkForPermissions(plr) then
+                local player = getPlayer(attributes[2], plr)
+
+                Unjail(player)
+            end
+        end
+
+        if attributes[1] == prefix .. "sword" then
+            if checkForPermissions(plr) then
+                local player = getPlayer(attributes[2], plr)
+                    
+                if type(player) == "table" then
+                    for i, v in pairs(player) do
+                        local newToolClone = game["Hidden"]:FindChild('Sword'):Clone()
+                        newToolClone.Parent = v["Backpack"]
                     end
+                else
+                    local newToolClone = game["Hidden"]:FindChild('Sword'):Clone()
+                    newToolClone.Parent = player["Backpack"]
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "music" and attributes[2] == prefix .. "stop" then
-                if checkForPermissions(plr) then
-                    if attributes[1] and attributes[2] then
+        if attributes[1] == prefix .. "music" and attributes[2] == "play" then
+            if checkForPermissions(plr) then
+                if attributes[1] and attributes[2] and attributes[3] then
+                    if type(tonumber(attributes[3])) == "number" then
+                        print("Attempt to start sound.")
+
+                        print("Stopped all sound(s).")
                         for i, v in pairs(musicFolder:GetChildren()) do
                             if v:IsA('Sound') then
-                                v:Destroy()
+                                v:Stop()
                             end
                         end
-                    end
-                end
-            end
+                        
+                        print("Broadcasted sound change alert.")
+                        Chat:BroadcastMessage("<color=#37c200>Now playing: " .. attributes[3] .. " started by " .. plr.Name .. ".</color>")
 
-            if attributes[1] == prefix .. "health" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
+                        print("Checked for cached sound:")
+                        local cachedSoundCheck = checkCachedSounds(tonumber(attributes[3]))
+                        print(cachedSoundCheck)
 
-                        if attributes[3] then
-                            if type(player) == "table" then
-                                for i, v in pairs(player) do
-                                    if v:IsA('Player') then
-                                        v.Health = tonumber(attributes[3])
-                                    end
-                                end
-                            else
-                                player.Health = tonumber(attributes[3])
-                            end
+                        if cachedSoundCheck == false then
+                            print("Sound is not cached.")
+
+                            local newMusic = Instance.New('Sound')
+                            newMusic.SoundID = tonumber(attributes[3])
+
+                            newMusic.Volume = 5
+                            newMusic.Parent = musicFolder
+                            newMusic:Play()
                         else
-                            Error("health", "Requires a valid health argument", plr)
+                            print("Sound is cached.")
+
+                            cachedSoundCheck:Play()
                         end
-                    else
-                        Error("health", "Requires a valid player argument", plr)
                     end
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "heal" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-
-                        if player then
-                            if type(player) == "table" then
-                                for i, v in pairs(player) do
-                                    if v:IsA('Player') then
-                                        v.Health = v.MaxHealth
-                                    end
-                                end
-                            else
-                                player.Health = player.MaxHealth
-                            end
-                        else
-                            Error("heal", "That player does not exist", plr)
+        if attributes[1] == prefix .. "music" and attributes[2] == "stop" then
+            if checkForPermissions(plr) then
+                if attributes[1] and attributes[2] then
+                    for i, v in pairs(musicFolder:GetChildren()) do
+                        if v:IsA('Sound') then
+                            v:Stop()
                         end
-                    else
-                        Error("heal", "Requires a valid player argument", plr)
                     end
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "damage" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
+        if attributes[1] == prefix .. "health" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
 
-                        if attributes[3] then
-                            if type(player) == "table" then
-                                for i, v in pairs(player) do
-                                    if v:IsA('Player') then
-                                        v.Health = v.Health - attributes[3]
-                                    end
-                                end
-                            else
-                                player.Health = player.Health - attributes[3]
-                            end
-                        else
-                            Error("damage", "Requires a valid damage (number) argument", plr)
-                        end
-                    else
-                        Error("damage", "Requires a valid player argument", plr)
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "kill" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-
+                    if attributes[3] then
                         if type(player) == "table" then
                             for i, v in pairs(player) do
                                 if v:IsA('Player') then
-                                    v.Health = 0
+                                    v.Health = tonumber(attributes[3])
                                 end
                             end
                         else
-                            player.Health = 0
+                            player.Health = tonumber(attributes[3])
                         end
                     else
-                        Error("kill", "Requires a valid player argument", plr)
+                        Error("health", "Requires a valid health argument", plr)
                     end
+                else
+                    Error("health", "Requires a valid player argument", plr)
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "walkspeed" or attributes[1] == prefix .. "speed" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
+        if attributes[1] == prefix .. "heal" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
 
-                        if attributes[3] then
+                    if player then
+                        if type(player) == "table" then
+                            for i, v in pairs(player) do
+                                if v:IsA('Player') then
+                                    v.Health = v.MaxHealth
+                                end
+                            end
+                        else
+                            player.Health = player.MaxHealth
+                        end
+                    else
+                        Error("heal", "That player does not exist", plr)
+                    end
+                else
+                    Error("heal", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "damage" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if attributes[3] then
+                        if type(player) == "table" then
+                            for i, v in pairs(player) do
+                                if v:IsA('Player') then
+                                    v.Health = v.Health - attributes[3]
+                                end
+                            end
+                        else
+                            player.Health = player.Health - attributes[3]
+                        end
+                    else
+                        Error("damage", "Requires a valid damage (number) argument", plr)
+                    end
+                else
+                    Error("damage", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "kill" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if type(player) == "table" then
+                        for i, v in pairs(player) do
+                            if v:IsA('Player') then
+                                v.Health = 0
+                            end
+                        end
+                    else
+                        player.Health = 0
+                    end
+                else
+                    Error("kill", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "walkspeed" or attributes[1] == prefix .. "speed" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if attributes[3] then
+                        if type(tonumber(attributes[3])) == "number" then
                             if type(player) == "table" then
                                 for i, v in pairs(player) do
                                     if v:IsA('Player') then
@@ -559,20 +712,36 @@ players.PlayerAdded:Connect(function (plr)
                                 player.WalkSpeed = tonumber(attributes[3])
                             end
                         else
-                            Error("walkspeed", "Requires a valid walkspeed (number) argument", plr)
+                            if attributes[3] == "reset" then
+                                if type(player) == "table" then
+                                    for i, v in pairs(player) do
+                                        if v:IsA('Player') then
+                                            v.WalkSpeed = playerDefaults.WalkSpeed
+                                        end
+                                    end
+                                else
+                                    player.WalkSpeed = playerDefaults.WalkSpeed
+                                end
+                            else
+                                Error("walkspeed", "Requires a number argument for the specified walk speed", plr)
+                            end
                         end
                     else
-                        Error("walkspeed", "Requires a valid player argument", plr)
+                        Error("walkspeed", "Requires a valid walkspeed (number) argument", plr)
                     end
+                else
+                    Error("walkspeed", "Requires a valid player argument", plr)
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "jumppower" or attributes[1] == prefix .. "jp" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
+        if attributes[1] == prefix .. "jumppower" or attributes[1] == prefix .. "jp" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
 
-                        if attributes[3] then
+                    if attributes[3] then
+                        if type(tonumber(attributes[3])) == "number" then
                             if type(player) == "table" then
                                 for i, v in pairs(player) do
                                     if v:IsA('Player') then
@@ -583,91 +752,209 @@ players.PlayerAdded:Connect(function (plr)
                                 player.JumpPower = tonumber(attributes[3])
                             end
                         else
-                            Error("jumppower", "Requires a valid jump power (number) argument", plr)
+                            if attributes[3] == "reset" then
+                                if type(player) == "table" then
+                                    for i, v in pairs(player) do
+                                        if v:IsA('Player') then
+                                            v.JumpPower = playerDefaults.JumpPower
+                                        end
+                                    end
+                                else
+                                    player.JumpPower = playerDefaults.JumpPower
+                                end 
+                            else
+                                Error("jumppower", "Requires a number argument for the specified jump power", plr)
+                            end
                         end
                     else
-                        Error("jumppower", "Requires a valid player argument", plr)
+                        Error("jumppower", "Requires a valid jump power (number) argument", plr)
+                    end
+                else
+                    Error("jumppower", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "freecam" then
+            if checkForPermissions(plr) then
+                Chat:UnicastMessage('[' .. prefix .. 'freecam] To exit free camera mode, type "' .. prefix .. 'reset" to completely reset your player or "' .. prefix .. 'resetcamera" to just reset your camera.', plr)
+                plr.CameraMode = CameraMode.Free
+            end
+        end
+
+        if attributes[1] == prefix .. "reset" or attributes[1] == prefix .. "re" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    resetPlayer(player)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "resetcamera" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    player.CameraMode = CameraMode.FollowPlayer
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "freeze" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if type(player) == "table" then
+                        for i, v in pairs(player) do
+                            if v:IsA('Player') then
+                                v.WalkSpeed = 0
+                            end
+                        end
+                    else
+                        if player:IsA('Player') then
+                            player.WalkSpeed = 0
+                        end
                     end
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "version" then
-                if checkForPermissions(plr) then
-                    SuccessMessage("The PolyAdmin model in this game is: v" .. modelVersion, plr)
-                end
-            end
+        if attributes[1] == prefix .. "unfreeze" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
 
-            if attributes[1] == prefix .. "freecam" then
-                if checkForPermissions(plr) then
-                    Chat:UnicastMessage('[' .. prefix .. 'freecam] To exit free camera mode, type "' .. prefix .. 'reset" to completely reset your player or "' .. prefix .. 'resetcamera" to just reset your camera.', plr)
-                    plr.CameraMode = CameraMode.Free
-                end
-            end
-
-            if attributes[1] == prefix .. "reset" or attributes[1] == prefix .. "re" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-
-                        resetPlayer(player)
+                    if type(player) == "table" then
+                        for i, v in pairs(player) do
+                            if v:IsA('Player') then
+                                v.WalkSpeed = 16
+                            end
+                        end
+                    else
+                        if player:IsA('Player') then
+                            player.WalkSpeed = 16
+                        end
                     end
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "resetcamera" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
+        if attributes[1] == prefix .. "chat" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
 
-                        player.CameraMode = CameraMode.FollowPlayer
+                    local message = ""
+
+                    for messageCheck = 3, #attributes, 1 do
+                        if attributes[messageCheck] then
+                            message = message .. " " .. attributes[messageCheck]
+                        end
+                    end
+
+                    -- Using the chat command to get players in moderation trouble either on Polytoria or in games is strictly forbidden
+
+                    if type(player) == "table" then
+                        for i, v in pairs(player) do
+                            if v:IsA('Player') then
+                                Chat:BroadcastMessage(v.Name .. ":" .. message)
+                            end
+                        end
+                    else
+                        if player:IsA('Player') then
+                            Chat:BroadcastMessage(player.Name .. ":" .. message)
+                        end
                     end
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "freeze" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
+        if attributes[1] == prefix .. "chatcolor" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
 
-                        if type(player) == "table" then
-                            for i, v in pairs(player) do
-                                if v:IsA('Player') then
-                                    v.WalkSpeed = 0
+                    if type(player) == "table" then
+                        for i, v in pairs(player) do
+                            if v:IsA('Player') then
+                                if checkForPermissions(v) == false then
+                                    v.ChatColor = Color.FromHex(attributes[3])
+                                else
+                                    Chat:UnicastMessage("That player's chat color cannot be modify as they are an administrator.", plr)
                                 end
                             end
-                        else
-                            if player:IsA('Player') then
-                                player.WalkSpeed = 0
+                        end
+                    else
+                        if player:IsA('Player') then
+                            if checkForPermissions(v) == false then
+                                player.ChatColor = Color.FromHex(attributes[3])
+                            else
+                                Chat:UnicastMessage("That player's chat color cannot be modify as they are an administrator.", plr)
                             end
                         end
                     end
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "unfreeze" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
+        if attributes[1] == prefix .. "userid" or attributes[1] == prefix .. "uid" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
 
-                        if type(player) == "table" then
-                            for i, v in pairs(player) do
-                                if v:IsA('Player') then
-                                    v.WalkSpeed = 16
-                                end
-                            end
-                        else
-                            if player:IsA('Player') then
-                                player.WalkSpeed = 16
-                            end
+                    if type(player) != "table" then
+                        if player:IsA('Player') then
+                            Chat:UnicastMessage(player.Name .. "'s user ID is " .. player.UserID .. ".", plr)
                         end
                     end
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "chat" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
+        if attributes[1] == prefix .. "respawntime" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if attributes[3] then
+                        if type(player) == "table" then
+                            for i, v in pairs(player) do
+                                if v:IsA('Player') then
+                                    v.RespawnTime = tonumber(attributes[3])
+                                end
+                            end
+                        else
+                            if player:IsA('Player') then
+                                player.RespawnTime = tonumber(attributes[3])
+                            end
+                        end
+                    else
+                        Error("respawntime", "Requires a valid respawn time (number) argument", plr)
+                    end 
+                else
+                    Error("respawntime", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "sit" then
+            if checkForPermissions(plr) then
+                local player = getPlayer(attributes[2], plr)
+
+                Sit(player)
+            end
+        end
+
+        if attributes[1] == prefix .. "createtext" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if attributes[3] then
+                        local newText = Instance.New('Text3D')
 
                         local message = ""
 
@@ -677,87 +964,291 @@ players.PlayerAdded:Connect(function (plr)
                             end
                         end
 
-                        -- Using the chat command to get players in moderation trouble either on Polytoria or in games is strictly forbidden
+                        newText.Position = player.Position
+                        newText.Rotation = player.Rotation
+                        newText.Text = message
+                    else
+                        Error("createtext", "Requires a valid text (string) argument", plr)
+                    end
+                else
+                    Error("createtext", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "message" or attributes[1] == prefix .. "msg" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if attributes[3] then
+                        local message = ""
+
+                        for messageCheck = 3, #attributes, 1 do
+                            if attributes[messageCheck] then
+                                message = message .. " " .. attributes[messageCheck]
+                            end
+                        end
 
                         if type(player) == "table" then
                             for i, v in pairs(player) do
                                 if v:IsA('Player') then
-                                    Chat:BroadcastMessage(v.Name .. ":" .. message)
+                                    Chat:UnicastMessage("[Message from " .. plr.Name .. "] " .. message, v)
                                 end
                             end
                         else
-                            if player:IsA('Player') then
-                                Chat:BroadcastMessage(player.Name .. ":" .. message)
-                            end
+                            Chat:UnicastMessage("[Message from " .. plr.Name .. "] " .. message, player)
                         end
+                    else
+                        Error("message", "Requires a valid message (string) argument", plr)
                     end
+                else
+                    Error("message", "Requires a valid player argument", plr)
                 end
             end
+        end
 
-            if attributes[1] == prefix .. "chatcolor" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
+        if attributes[1] == prefix .. "maxhealth" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
 
-                        if type(player) == "table" then
-                            for i, v in pairs(player) do
-                                if v:IsA('Player') then
-                                    if checkForPermissions(v) == false then
-                                        v.ChatColor = Color.FromHex(attributes[3])
-                                    else
-                                        Chat:UnicastMessage("That player's chat color cannot be modify as they are an administrator.", plr)
-                                    end
-                                end
-                            end
-                        else
-                            if player:IsA('Player') then
-                                if checkForPermissions(v) == false then
-                                    player.ChatColor = Color.FromHex(attributes[3])
-                                else
-                                    Chat:UnicastMessage("That player's chat color cannot be modify as they are an administrator.", plr)
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "userid" or attributes[1] == prefix .. "uid" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-
-                        if type(player) != "table" then
-                            if player:IsA('Player') then
-                                Chat:UnicastMessage(player.Name .. "'s user ID is " .. player.UserID .. ".", plr)
-                            end
-                        end
-                    end
-                end
-            end
-
-            if attributes[1] == prefix .. "respawntime" then
-                if checkForPermissions(plr) then
-                    if attributes[2] then
-                        local player = getPlayer(attributes[2], plr)
-
-                        if attributes[3] then
+                    if attributes[3] then
+                        if type(tonumber(attributes[3])) == "number" then
                             if type(player) == "table" then
                                 for i, v in pairs(player) do
                                     if v:IsA('Player') then
-                                        v.RespawnTime = tonumber(attributes[3])
+                                        v.MaxHealth = tonumber(attributes[3])
                                     end
                                 end
                             else
                                 if player:IsA('Player') then
-                                    player.RespawnTime = tonumber(attributes[3])
+                                    player.MaxHealth = tonumber(attributes[3])
                                 end
                             end
                         else
-                            Error("respawntime", "Requires a valid respawn time (number) argument", plr)
-                        end 
+                            if attributes[3] == "reset" then
+                                if type(player) == "table" then
+                                    for i, v in pairs(player) do
+                                        if v:IsA('Player') then
+                                            v.MaxHealth = playerDefaults.MaxHealth
+                                        end
+                                    end
+                                else
+                                    if player:IsA('Player') then
+                                        player.MaxHealth = playerDefaults.MaxHealth
+                                    end
+                                end
+                            else
+                                Error("maxhealth", "Requires a number argument for the specified max health", plr)
+                            end
+                        end
                     else
-                        Error("respawntime", "Requires a valid player argument", plr)
+                        Error("maxhealth", "Requires a valid respawn time (number) argument", plr)
+                    end 
+                else
+                    Error("maxhealth", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "cleartools" or attributes[1] == prefix .. "notools" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if type(player) == "table" then
+                        for i, v in pairs(player) do
+                            if v:IsA('Player') then
+                                for i, v in pairs(v["Backpack"]:GetChildren()) do
+                                    if v:IsA('Tool') then
+                                        v:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    else
+                        if player:IsA('Player') then
+                            for i, v in pairs(player["Backpack"]:GetChildren()) do
+                                if v:IsA('Tool') then
+                                    v:Destroy()
+                                end
+                            end
+                        end
+                    end
+                else
+                    Error("cleartools", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "droptool" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if type(player) == "table" then
+                        for i, v in pairs(player) do
+                            if v:IsA('Player') then
+                                v:DropTools()
+                            end
+                        end
+                    else
+                        if player:IsA('Player') then
+                            player:DropTools()
+                        end
+                    end
+                else
+                    Error("droptool", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "godmode" then
+            if checkForPermissions(plr) then
+                local newToolClone = game["Hidden"]:FindChild('GodMode-Explosion'):Clone()
+                newToolClone.Parent = plr["Backpack"]
+            end
+        end
+
+        --[[
+        if attributes[1] == prefix .. "logs" then
+            if checkForPermissions(plr) then
+                local playergui = plr["PlayerGUI"]
+                local logsGUI = playergui["Logs"]
+
+                logsGUI.Visible = true
+            end
+        end
+        --]]
+
+        if attributes[1] == prefix .. "forcefield" or attributes[1] == prefix .. "ff" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if type(player) == "table" then
+                        for i, v in pairs(player) do
+                            if v:IsA('Player') then
+                                v.MaxHealth = 10000000000000000000000000
+                                v.Health = v.MaxHealth
+                                --[[
+                                if not environment:FindChild(v.UserID .. '_Forcefield') then
+                                    local newPart = Instance.New("Part")
+                                    newPart.Size = Vector3.New(0.1, 0.1, 0.1)
+                                    newPart.Anchored = true
+                                    newPart.CanCollide = false
+                                    newPart.Parent = environment
+                                    newPart.Name = v.UserID .. "_Forcefield"
+
+                                    while v.Health < v.MaxHealth do
+                                        if environment:FindChild(v.UserID .. '_Forcefield') then
+                                            v.Health = v.MaxHealth
+                                        else
+                                            return
+                                        end
+                                    end
+                                end
+                                --]]
+                            end
+                        end
+                    else
+                        if player:IsA('Player') then
+                            player.MaxHealth = 10000000000000000000000000
+                            player.Health = player.MaxHealth
+                            --[[
+                            if not environment:FindChild(player.UserID .. '_Forcefield') then
+                                local newPart = Instance.New("Part")
+                                newPart.Size = Vector3.New(0, 0, 0)
+                                newPart.CanCollide = false
+                                newPart.Anchored = true
+                                newPart.Parent = environment
+                                newPart.Name = player.UserID .. "_Forcefield"
+
+                                while player.Health < player.MaxHealth do
+                                    if environment:FindChild(player.UserID .. '_Forcefield') then
+                                        player.Health = player.MaxHealth
+                                    else
+                                        return
+                                    end
+                                end
+                            end
+                            --]]
+                        end
+                    end
+                else
+                    Error("forcefield", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "unforcefield" or attributes[1] == prefix .. "unff" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    local player = getPlayer(attributes[2], plr)
+
+                    if type(player) == "table" then
+                        for i, v in pairs(player) do
+                            if v:IsA('Player') then
+                                v.MaxHealth = game["PlayerDefaults"].MaxHealth
+                                v.Health = v.MaxHealth
+                                --[[
+                                if not environment:FindChild(v.UserID .. '_Forcefield') then
+                                    local newPart = Instance.New("Part")
+                                    newPart.Size = Vector3.New(0.1, 0.1, 0.1)
+                                    newPart.Anchored = true
+                                    newPart.CanCollide = false
+                                    newPart.Parent = environment
+                                    newPart.Name = v.UserID .. "_Forcefield"
+
+                                    while v.Health < v.MaxHealth do
+                                        if environment:FindChild(v.UserID .. '_Forcefield') then
+                                            v.Health = v.MaxHealth
+                                        else
+                                            return
+                                        end
+                                    end
+                                end
+                                --]]
+                            end
+                        end
+                    else
+                        if player:IsA('Player') then
+                            player.MaxHealth = game["PlayerDefaults"].MaxHealth
+                            player.Health = player.MaxHealth
+                            --[[
+                            if not environment:FindChild(player.UserID .. '_Forcefield') then
+                                local newPart = Instance.New("Part")
+                                newPart.Size = Vector3.New(0, 0, 0)
+                                newPart.CanCollide = false
+                                newPart.Anchored = true
+                                newPart.Parent = environment
+                                newPart.Name = player.UserID .. "_Forcefield"
+
+                                while player.Health < player.MaxHealth do
+                                    if environment:FindChild(player.UserID .. '_Forcefield') then
+                                        player.Health = player.MaxHealth
+                                    else
+                                        return
+                                    end
+                                end
+                            end
+                            --]]
+                        end
+                    end
+                else
+                    Error("unforcefield", "Requires a valid player argument", plr)
+                end
+            end
+        end
+
+        if attributes[1] == prefix .. "playercollisions" then
+            if checkForPermissions(plr) then
+                if attributes[2] then
+                    if attributes[2] == "true" then
+                        players.PlayerCollisionEnabled = true
+                    else
+                        players.PlayerCollisionEnabled = false
                     end
                 end
             end
@@ -784,6 +1275,44 @@ function checkForPermissions(plr)
         return true
     end
     return false
+end
+
+function checkModelVersion()
+    Http:Get('https://raw.githubusercontent.com/IndexGit01/PolytoriaAdmin/main/version.json', function (data, err, errmsg)
+        if not err then
+            print("DATA: " .. data)
+            print("MODEL VERSION: " .. modelVersion)
+            return data
+        else
+            print(errmsg)
+            return errmsg
+        end
+    end,{})
+end
+
+function checkProtectedUsers(plr, executioner)
+    if executioner.IsCreator == false then
+        for tablePosition = 1, #protectedusers do
+            if protectedusers[tablePosition] == plr.UserID then
+                return true
+            end
+        end
+    
+        if protectGameCreator == true then
+            if plr.IsCreator then
+                return true
+            end
+        end
+    
+        if protectAdmins == true then
+            if checkForPermissions(plr) then
+                return true
+            end
+        end
+        return false
+    else
+        return false
+    end
 end
 
 function checkBanList(plr)
@@ -861,63 +1390,117 @@ function getPlayer(plr, executioner)
 end
 
 function resetPlayer(plr)
-    if plr:IsA('Player') then
-        -- Save Old Position + Old Rotation
-        local oldPos = plr.Position
-        local oldRotation = plr.Rotation
-
-        -- Respawn Player
-        plr.RespawnTime = 0
-        plr:Respawn()
-
-        -- Reset Position + Rottion
-        plr.Position = oldPos
-        plr.Rotation = oldRotation
-
-        -- Reset WalkSpeed + JumpPower
-        plr.WalkSpeed = 16
-        plr.JumpPower = 36
-
-        -- Reset Health & Respawn Time
-        plr.Health = 100
-        plr.RespawnTime = 5
-        -- plr.CameraMode = CameraMode.FollowPlayer
+    if type(plr) == "table" then
+        for i, v in pairs(plr) do
+            if v:IsA('Player') then
+                -- Save Old Position + Old Rotation
+                local oldPos = v.Position
+                local oldRotation = v.Rotation
+        
+                -- Respawn Player
+                v.RespawnTime = playerDefaults.RespawnTime
+                v:Respawn()
+        
+                -- Reset Position + Rottion
+                v.Position = oldPos
+                v.Rotation = oldRotation
+        
+                -- Reset WalkSpeed + JumpPower
+                v.WalkSpeed = playerDefaults.WalkSpeed
+                v.JumpPower = playerDefaults.JumpPower
+        
+                -- Reset Health, Max Health & Respawn Time
+                v.Health = playerDefaults.MaxHealth
+                v.MaxHealth = playerDefaults.MaxHealth
+                v.RespawnTime = playerDefaults.RespawnTime
+                -- v.CameraMode = CameraMode.FollowPlayer
+            end
+        end
+    else
+        if plr:IsA('Player') then
+            -- Save Old Position + Old Rotation
+            local oldPos = plr.Position
+            local oldRotation = plr.Rotation
+    
+            -- Respawn Player
+            plr.RespawnTime = playerDefaults.RespawnTime
+            plr:Respawn()
+    
+            -- Reset Position + Rottion
+            plr.Position = oldPos
+            plr.Rotation = oldRotation
+    
+            -- Reset WalkSpeed + JumpPower
+            plr.WalkSpeed = playerDefaults.WalkSpeed
+            plr.JumpPower = playerDefaults.JumpPower
+    
+            -- Reset Health, Max Health & Respawn Time
+            plr.Health = playerDefaults.MaxHealth
+            plr.MaxHealth = playerDefaults.MaxHealth
+            plr.RespawnTime = playerDefaults.RespawnTime
+            -- v.CameraMode = CameraMode.FollowPlayer
+        end
     end
+end
+
+function checkCachedSounds(id)
+    for i, v in pairs(musicFolder:GetChildren()) do
+        if v.SoundID == id then
+            return v
+        end
+    end
+    return false
 end
 
 function Kick(plr, reason, executioner)
     if type(plr) == "table" then
         for i, v in pairs(plr) do
-            if plr.Name != "Index" then
-                Chat:UnicastMessage('You have been kicked from the game for: "' .. reason .. '".', v)
-                wait(0)
-                v:Kick('You have been kicked for: "' .. reason .. '".')
-            else
-                Error("kick", "You do not have the correct permission to run this command", plr)
+            if v:IsA('Player') then
+                if checkProtectedUsers(v, executioner) == false then
+                    Chat:UnicastMessage('You have been kicked from the game for: "' .. reason .. '".', v)
+                    wait(0)
+                    v:Kick('You have been kicked for: "' .. reason .. '".')
+                else
+                    Error("kick", v.Name .. " is protected from severe commands", executioner)
+                end
             end
         end
     else
-        Chat:UnicastMessage('You have been kicked from the game for: "' .. reason .. '".', plr)
-        wait(0)
-        plr:Kick('You have been kicked from the game for: "' .. reason .. '".')
+        if plr:IsA('Player') then
+            if checkProtectedUsers(plr, executioner) == false then
+                Chat:UnicastMessage('You have been kicked from the game for: "' .. reason .. '".', plr)
+                wait(0)
+                plr:Kick('You have been kicked from the game for: "' .. reason .. '".')
+            else
+                Error("kick", plr.Name .. " is protected from severe commands", executioner)
+            end
+        end
     end
 end
 
 function Ban(plr, reason, executioner)
     if type(plr) == "table" then
         for i, v in pairs(plr) do
-            if plr.Name != "Index" then
+            if v:IsA('Player') then
+                if checkProtectedUsers(v, executioner) == false then
+                    table.insert(banlist, plr.UserID)
+                    wait(0)
+                    Kick(plr, reason)
+                else
+                    Error("ban", v.Name .. " is protected from severe commands", executioner)
+                end
+            end
+        end
+    else
+        if plr:IsA('Player') then
+            if checkProtectedUsers(plr, executioner) == false then
                 table.insert(banlist, plr.UserID)
                 wait(0)
                 Kick(plr, reason)
             else
-                Error("ban", "You do not have the correct permission to run this command", plr)
+                Error("ban", plr.Name .. " is protected from severe commands", executioner)
             end
         end
-    else
-        table.insert(banlist, plr.UserID)
-        wait(0)
-        Kick(plr, reason)
     end
 end
 
@@ -972,6 +1555,7 @@ function Explode(plr)
     end
 end
 
+-- Credit to Vibin for updated jail command!
 function Jail(plr)
     if type(plr) == "table" then
         for i, v in pairs(plr) do
@@ -994,11 +1578,18 @@ function Jail(plr)
 
                 players.PlayerRemoved:Connect(function (plrLeave)
                     if plrLeave.UserID == v.UserID then
-                        if environment:FindChild("Jail_" .. v.UserID) then
-                            environment:FindChild("Jail_" .. v.UserID):Destroy()
+                        for i, jails in pairs(jailcells) do
+                            if jails.Name == "Jail_"..v.UserID then
+                                jails:Destroy()                   
+                                table.remove(jailcells, i)
+                                    
+                                break
+                            end
                         end
                     end
                 end)
+
+                table.insert(jailcells, #jailcells + 1, newJailClone)
             else
                 jailCheckAttempt.Position = v.Position
                 v.Position = jailCheckAttempt.Position
@@ -1024,11 +1615,18 @@ function Jail(plr)
 
             players.PlayerRemoved:Connect(function (plrLeave)
                 if plrLeave.UserID == plr.UserID then
-                    if environment:FindChild("Jail_" .. plr.UserID) then
-                        environment:FindChild("Jail_" .. plr.UserID):Destroy()
+                    for i, jails in pairs(jailcells) do
+                        if jails.Name == "Jail_"..plr.UserID then
+                            jails:Destroy()                   
+                            table.remove(jailcells, i)
+                                
+                            break
+                        end
                     end
                 end
             end)
+
+            table.insert(jailcells, #jailcells + 1, newJailClone)
         else
             jailCheckAttempt.Position = plr.Position
             plr.Position = jailCheckAttempt.Position
@@ -1037,20 +1635,69 @@ function Jail(plr)
     end
 end
 
+-- Credit to Vibin for updated jail command!
 function Unjail(plr)
     if type(plr) == "table" then
         for i, v in pairs(plr) do
-            local jailCheckAttempt = environment:FindChild("Jail_" .. v.UserID)
+            for i, jails in pairs(jailcells) do
+                if jails.Name == "Jail_"..v.UserID then
+                    jails:Destroy()                   
+                    table.remove(jailcells, i)
 
-            if jailCheckAttempt then
-                jailCheckAttempt:Destroy()
+                    break
+                end
             end
         end
     else
-        local jailCheckAttempt = environment:FindChild("Jail_" .. plr.UserID)
+        for i, jails in pairs(jailcells) do
+            if jails.Name == "Jail_"..plr.UserID then
+                jails:Destroy()                   
+                table.remove(jailcells, i)
+                    
+                break
+            end
+        end
+    end
+end
 
-        if jailCheckAttempt then
-            jailCheckAttempt:Destroy()
+function Sit(plr)
+    if type(plr) == "table" then
+        for i, v in pairs(plr) do
+            if v:IsA('Player') then
+                local seatCheckAttempt = environment:FindChild("Seat_" .. v.UserID)
+
+                if not seatCheckAttempt then
+                    local newSeat = Instance.New('Seat')
+
+                    Seat.Position = v.Position
+                    Seat.Rotation = v.Rotation
+                    Seat.Anchored = false
+                    Seat.CanCollide = true
+
+                    v:Sit(newSeat)
+
+                    v.SittingIn.Changed:Connect(function ()
+                        newSeat:Destroy()
+                    end)
+                end
+            end
+        end
+    else
+        local seatCheckAttempt = environment:FindChild("Seat_" .. plr.UserID)
+
+        if not seatCheckAttempt then
+            local newSeat = Instance.New('Seat')
+
+            Seat.Position = plr.Position
+            Seat.Rotation = plr.Rotation
+            Seat.Anchored = true
+            Seat.CanCollide = true
+
+            plr:Sit(newSeat)
+
+            plr.SittingIn.Changed:Connect(function ()
+                newSeat:Destroy()
+            end)
         end
     end
 end
