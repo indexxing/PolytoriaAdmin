@@ -32,8 +32,11 @@ To use commands, your message must start with a ":" colon (this can be changed l
 - **:sword** [PLAYER (required)] - Gives the player a sword.
 - **:health** [PLAYER (required)] [HEALTH (required)] - Sets the player's health to the health specified. 
 - **:heal** [PLAYER (required)] - Sets the player's health to their maximum health.
-- **:reset (OR) :re** [PLAYER (required)] - Resets the player's health, walk speed, jump power, respawn time, etc (the player also gets respawned but in the exact same position as where they were before they were respawned.)
-- **:walkspeed (OR) :speed** [PLAYER (required)] [WALK SPEED (required)] - Sets the player's walk speed to the walk speed specified (will throw an error if the number is massive)
-- **:jumppower (OR) :jp** [PLAYER (required)] [JUMP POWER (required)] - Sets the player's jump power to the jump power specified (will throw an error if the number is massive)
+- **:reset (OR) :re** [PLAYER (required)] - Resets the player's health, walk speed, jump power, respawn time, etc (the player also gets respawned but in the exact same position as where they were before they were respawned).
+- **:walkspeed (OR) :speed** [PLAYER (required)] [WALK SPEED (required)] - Sets the player's walk speed to the walk speed specified (will throw an error if the number is massive).
+- **:jumppower (OR) :jp** [PLAYER (required)] [JUMP POWER (required)] - Sets the player's jump power to the jump power specified (will throw an error if the number is massive).
+- **:maxhealth** [PLAYER (required)] [MAX HEALTH (required)] - Sets the player's max health to the max health specified.
+- **:music play** [SOUND ID (required)] - Plays the specified sound ID to everyone in the game (if the sound has already been played before, it'll replay that sound instead of creating an entire new sounds & downloading an entirely new sound to reduce lag).
+- **:music stop** [SOUND ID (required)] - Stops all sounds currently playing (only sounds started by the model).
 
 ## More commands will be added in the future, some commands have not been added due to Polytoria scripting limitations.
