@@ -8,11 +8,7 @@ Polytoria chat moderation, fun, utility & misc commands. Made by Index.
 # Prefix
 To use commands, your message must start with a ":" colon (this can be changed later in settings per the game developer's wishes by changing the "prefix" variable at the top of the script).
 
-# Known Bugs
-- **Automatically giving Administrator Permissions to "Player" in Polytoria Creator** - Will 100% be fixed in the next release of the model, for now, just publish your games & go to the real game & play it or just use no admin in the "Test Game" in Polytoria's Creator.
-- **Fixing Usernames with Spaces** - Slight fix implemented by adding shortended usernames.
-
-# Commands Available (10)
+# Commands Available (10, LIST OUT-OF-DATE)
 - **:help** - Displays a list of commands in chat to the user who executed the command.
 - **:version** - Displays the current model version that is being used in the game.
 - **:userid (OR) :uid** [PLAYER (required)] - Displays the USER ID of the player, the player must be in the game at the time of the command.
